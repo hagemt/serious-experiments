@@ -11,6 +11,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
+	"path"
 	"strings"
 	"time"
 )
@@ -27,7 +28,7 @@ func seed(ai gpt3.Client, options ...divineOption) *iGod {
 	// the REPL calls this with context, and expects an edict
 	i.Speak = func(ctx context.Context, prompt string) edict {
 		var risky float32 = 0.5 // 0 = most conservative
-		text := strings.TrimSpace(prompt)
+		input := strings.TrimSpace(prompt)
 		req := gpt3.CompletionRequest{
 			//Echo:             false,
 			//FrequencyPenalty: 0,
@@ -36,24 +37,27 @@ func seed(ai gpt3.Client, options ...divineOption) *iGod {
 			//PresencePenalty:  0,
 			//Stream:           false,
 			//TopP:             nil,
-			MaxTokens:        gpt3.IntPtr(1000),
-			Prompt:           []string{text},
-			Stop:             []string{"\n", ".", "!", "?"},
-			Temperature:      &risky,
+			MaxTokens:   gpt3.IntPtr(1000),
+			Prompt:      []string{input},
+			Stop:        []string{".", "!", "?"},
+			Temperature: &risky,
 		}
 		//log.Println(req)
 		c, err := ai.Completion(ctx, req)
 		//log.Println(c)
 		if err != nil {
 			log.Println(err)
-			return failedEdict(err)
+			return failedEdict(errors.New("please try again"))
 		}
-		output := strings.Trim(c.Choices[0].Text, " .")
-		return simpleEdict(fmt.Sprintf("%s.", output))
+		first := c.Choices[0]
+		log.Println(first.FinishReason, first.Text)
+		output := strings.TrimSpace(first.Text)
+		output = strings.ReplaceAll(output, "\n", " ")
+		output = strings.ReplaceAll(output, "  ", ". ")
+		return simpleEdict(fmt.Sprintf("%s.", strings.TrimSuffix(output, ".")))
 	}
 	return i
 }
-
 
 func die(err error) {
 	if err != nil {
@@ -64,8 +68,14 @@ func die(err error) {
 }
 
 func setup() (*iGod, error) {
-	_ = dotenv.Overload("./.env", "~/.iGod")
-	ans := struct {Deity, Engine, Human, Key, Org, URL string}{
+	home := "/"
+	if dir, err := os.UserHomeDir(); err != nil || len(dir) > 0 {
+		home = envString("AI_HOME_DIR", dir)
+	}
+	log.Println(home) // purple?
+	_ = dotenv.Load(path.Join(home, ".iGod"))
+	_ = dotenv.Overload() // will use .env if present
+	ans := struct{ Deity, Engine, Human, Key, Org, URL string }{
 		Deity:  envString("DEITY_NAME", "iGod"),
 		Engine: envString("AI_ENGINE_ID", "davinci-instruct-beta"),
 		Human:  envString("HUMAN_NAME", "Human"),
@@ -91,33 +101,33 @@ func setup() (*iGod, error) {
 	qs = append(qs, &survey.Question{
 		Name: "Human",
 		Prompt: &survey.Input{
-			Default:  ans.Human,
-			Help:     "a humble moniker",
-			Message:  "What is your name?",
+			Default: ans.Human,
+			Help:    "a humble moniker",
+			Message: "What is your name?",
 		},
 		Transform: survey.Title,
 		Validate:  survey.Required,
 	})
 	die(survey.Ask(qs, &ans))
-	fmt.Println(ans.Deity, "is almost ready to speak with you,", ans.Human)
+	fmt.Println(ans.Deity, "is almost ready to speak with you,", ans.Human) // yellow?
 
 	// test that GTP will work
 	if len(ans.Key) == 0 {
 		return nil, errors.New("missing secret")
 	}
 	gpt := gpt3.NewClient(ans.Key, gpt3.WithDefaultEngine(ans.Engine))
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if _, err := gpt.Engine(ctx, ans.Engine); err != nil {
 		return nil, fmt.Errorf("fatal: %v", err)
 	}
-	app := &cli.App{}
-	app.Setup()
 	return seed(gpt, withNames(ans.Deity, ans.Human)), nil
 }
 
 func main() {
-	s, err := setup()
+	app := &cli.App{}
+	app.Setup()
+	god, err := setup()
 	die(err)
-	die(repl.REPL(s))
+	die(repl.REPL(god))
 }

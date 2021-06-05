@@ -61,7 +61,7 @@ func (god *iGod) Eval(input string) (string, bool, error) {
 		return "", false, errors.New("what")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if s := god.Speak(ctx, line); s != nil {
 		return s.String(), false, s.Act()

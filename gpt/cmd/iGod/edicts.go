@@ -6,7 +6,7 @@ import (
 
 /*
 func boundedEdict(text string, dt time.Duration, act func (context.Context) error) edict {
-	return &contextEdict{
+	return &complexEdict{
 		actor: func(ctx context.Context) error {
 			stop := make(chan error, 1)
 			dtx, cancel := context.WithTimeout(ctx, dt)
@@ -27,7 +27,7 @@ func boundedEdict(text string, dt time.Duration, act func (context.Context) erro
 */
 
 func failedEdict(e error) edict {
-	return &contextEdict{
+	return &complexEdict{
 		actor: func(ctx context.Context) error {
 			return e
 		},
@@ -37,11 +37,11 @@ func failedEdict(e error) edict {
 	}
 }
 
-func (e contextEdict) Act() error {
+func (e complexEdict) Act() error {
 	return e.actor(e.ctx)
 }
 
-func (e contextEdict) String() string {
+func (e complexEdict) String() string {
 	return e.text(e.ctx)
 }
 
