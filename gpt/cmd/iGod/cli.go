@@ -104,16 +104,20 @@ func setup(c *cli.Context) (client.Speaker, error) {
 			Validate: survey.Required,
 		})
 	}
-	qs = append(qs, &survey.Question{
-		Name: "Human",
-		Prompt: &survey.Input{
-			Default: ans.Human,
-			Help:    "a humble moniker",
-			Message: "What is your name?",
-		},
-		Transform: survey.Title,
-		Validate:  survey.Required,
-	})
+	if ans.Human != "Human" {
+			// skip prompt if known already
+	} else {
+			qs = append(qs, &survey.Question{
+					Name: "Human",
+					Prompt: &survey.Input{
+							Default: ans.Human,
+							Help:    "a humble moniker",
+							Message: "What is your name?",
+					},
+					Transform: survey.Title,
+					Validate:  survey.Required,
+			})
+	}
 	if err := survey.Ask(qs, &ans); err != nil {
 		return nil, err
 	}
@@ -216,7 +220,7 @@ func main() {
 				DefaultText: "none",
 				EnvVars:     []string{"HTTP_ADDR"},
 				Name:        "http-addr",
-				Usage:       "network port and/or address for an HTTP server instead of REPL",
+				Usage:       "network port and/or address for HTTP (vs. REPL in shell)",
 			},
 			&cli.StringFlag{
 				DefaultText: "will prompt",
@@ -229,26 +233,26 @@ func main() {
 				DefaultText: deityBrain,
 				EnvVars:     []string{"OPENAI_ENGINE"},
 				Name:        "openai-engine",
-				Usage:       "specify a certain OpenAI engine",
+				Usage:       "specify a given OpenAI engine; optional",
 				Value:       deityBrain,
 			},
 			&cli.StringFlag{
 				DefaultText: "none",
 				EnvVars:     []string{"OPENAI_KEY"},
 				Name:        "openai-key",
-				Usage:       "specify your OpenAI API key",
+				Usage:       "specify your OpenAI API key; required",
 			},
 			&cli.StringFlag{
 				DefaultText: "none",
 				EnvVars:     []string{"OPENAI_ORG"},
 				Name:        "openai-org",
-				Usage:       "specify your OpenAI organization ID (optional)",
+				Usage:       "specify your OpenAI organization ID; optional",
 			},
 			&cli.StringFlag{
 				DefaultText: "none",
 				EnvVars:     []string{"OPENAI_URL"},
 				Name:        "openai-url",
-				Usage:       "specify an base URL, for OpenAI APIs",
+				Usage:       "specify a base URL, for OpenAI APIs; optional",
 				Value:       "https://api.openai.com/v1",
 			},
 		},
