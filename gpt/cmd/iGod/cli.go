@@ -7,35 +7,46 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/PullRequestInc/go-gpt3"
 	"github.com/boynton/repl"
+	"github.com/hagemt/bijection/gpt/cmd/iGod/client"
+	"github.com/hagemt/bijection/gpt/cmd/iGod/server"
 	dotenv "github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 )
 
-func envString(propertyName, defaultValue string) string {
-	if val, ok := os.LookupEnv(propertyName); ok {
-		return val
-	}
-	return defaultValue
+var iGodVersion string
+type gptEngine struct {
+	apiClient  gpt3.Client
+	apiTimeout time.Duration
+	textEcho   bool
+	userAgent  string
 }
 
-func seed(ai gpt3.Client, options ...divineOption) *iGod {
-	i := newDeity(options...)
+func seed(ai *gptEngine, i client.Speaker) client.Speaker {
 	// the REPL calls this with context, and expects an edict
-	i.Speak = func(ctx context.Context, prompt string) edict {
+	i.Add(func(ctx context.Context, prompt string) client.Edict {
 		var risky float32 = 0.5 // 0 = most conservative
 		input := strings.TrimSpace(prompt)
+		if strings.HasPrefix(input, ".") {
+			echo := strings.TrimPrefix(input, ".echo ")
+			e, err := strconv.ParseBool(echo)
+			if err != nil {
+				return client.SimpleEdict(".echo " + strconv.FormatBool(ai.textEcho))
+			}
+			ai.textEcho = e
+			return client.SimpleEdict("ok")
+		}
 		req := gpt3.CompletionRequest{
 			//Echo:             false,
 			//FrequencyPenalty: 0,
 			//LogProbs:         nil,
 			//N:                nil,
 			//PresencePenalty:  0,
-			//Stream:           false,
 			//TopP:             nil,
 			MaxTokens:   gpt3.IntPtr(1000),
 			Prompt:      []string{input},
@@ -43,45 +54,34 @@ func seed(ai gpt3.Client, options ...divineOption) *iGod {
 			Temperature: &risky,
 		}
 		//log.Println(req)
-		c, err := ai.Completion(ctx, req)
+		c, err := ai.apiClient.Completion(ctx, req)
 		//log.Println(c)
 		if err != nil {
 			log.Println(err)
-			return failedEdict(errors.New("please try again"))
+			return client.FailedEdict(errors.New("please try again"))
 		}
 		first := c.Choices[0]
-		log.Println(first.FinishReason, first.Text)
+		if ai.textEcho {
+			// just pick the first choice
+			log.Println(first.FinishReason, first.Text)
+		}
 		output := strings.TrimSpace(first.Text)
 		output = strings.ReplaceAll(output, "\n", " ")
 		output = strings.ReplaceAll(output, "  ", ". ")
-		return simpleEdict(fmt.Sprintf("%s.", strings.TrimSuffix(output, ".")))
-	}
+		return client.SimpleEdict(fmt.Sprintf("%s.", strings.TrimSuffix(output, ".")))
+	})
 	return i
 }
 
-func die(err error) {
-	if err != nil {
-		//panic(err)
-		_, _ = fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-}
-
-func setup() (*iGod, error) {
-	home := "/"
-	if dir, err := os.UserHomeDir(); err != nil || len(dir) > 0 {
-		home = envString("AI_HOME_DIR", dir)
-	}
-	log.Println(home) // purple?
-	_ = dotenv.Load(path.Join(home, ".iGod"))
-	_ = dotenv.Overload() // will use .env if present
-	ans := struct{ Deity, Engine, Human, Key, Org, URL string }{
-		Deity:  envString("DEITY_NAME", "iGod"),
-		Engine: envString("AI_ENGINE_ID", "davinci-instruct-beta"),
-		Human:  envString("HUMAN_NAME", "Human"),
-		Key:    envString("OPEN_AI_KEY", ""),
-		//Org:    cmd.EnvString("OPEN_AI_ORG", ""),
-		//URL:    cmd.EnvString("OPEN_AI_URL", ""),
+func setup(c *cli.Context) (client.Speaker, error) {
+	ans := struct{ Debug, Deity, Engine, Human, Key, Org, URL string }{
+		Debug:  c.String("debug"),
+		Deity:  c.String("deity-name"),
+		Engine: c.String("openai-engine"),
+		Human:  c.String("human-name"),
+		Key:    c.String("openai-key"),
+		Org:    c.String("openai-org"),
+		URL:    c.String("openai-url"),
 	}
 
 	// prompt for text and anything missing
@@ -93,7 +93,7 @@ func setup() (*iGod, error) {
 			Name: "Key",
 			Prompt: &survey.Password{
 				Message: "What is the divine secret?",
-				Help:    "All mystery aside, we need the OpenAI engine to power iGod. (your API key, please)",
+				Help:    fmt.Sprintf("All mystery aside, we need the %s OpenAI engine. (API key)", ans.Engine),
 			},
 			Validate: survey.Required,
 		})
@@ -108,26 +108,156 @@ func setup() (*iGod, error) {
 		Transform: survey.Title,
 		Validate:  survey.Required,
 	})
-	die(survey.Ask(qs, &ans))
+	if err := survey.Ask(qs, &ans); err != nil {
+		return nil, err
+	}
 	fmt.Println(ans.Deity, "is almost ready to speak with you,", ans.Human) // yellow?
 
 	// test that GTP will work
 	if len(ans.Key) == 0 {
 		return nil, errors.New("missing secret")
 	}
-	gpt := gpt3.NewClient(ans.Key, gpt3.WithDefaultEngine(ans.Engine))
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if _, err := gpt.Engine(ctx, ans.Engine); err != nil {
-		return nil, fmt.Errorf("fatal: %v", err)
+	gpt := &gptEngine{
+		textEcho:   isDebug(ans.Debug, "echo"),
+		apiTimeout: c.Duration("openai-sla"),
+		userAgent:  c.String("user-agent"),
 	}
-	return seed(gpt, withNames(ans.Deity, ans.Human)), nil
+	if gpt.apiTimeout == 0 {
+		gpt.apiTimeout = time.Minute
+	}
+	if gpt.userAgent == "" {
+		gpt.userAgent = fmt.Sprintf("iGod/%s", iGodVersion)
+	}
+	// TODO: use org option, http Client?
+	gpt.apiClient = gpt3.NewClient(
+		ans.Key,
+		gpt3.WithBaseURL(ans.URL),
+		gpt3.WithDefaultEngine(ans.Engine),
+		gpt3.WithTimeout(gpt.apiTimeout),
+		gpt3.WithUserAgent(gpt.userAgent))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	if _, err := gpt.apiClient.Engine(ctx, ans.Engine); err != nil {
+		log.Println("fatal:", gpt, err)
+		return nil, err
+	}
+	god := seed(gpt, client.NewDeity(client.WithNames(ans.Deity, ans.Human)))
+	return god, nil
+}
+
+var debugFlags map[string][]string
+func isDebug(flag, key string) bool {
+	if debugFlags != nil {
+		// TODO: what is a better way to do this?
+		// --debug=* means echo AND loud (as does true)
+		// --debug=false means neither (opposite of ^^)
+		// either --debug=echo and --debug=loud
+		// how to support --debug=echo,loud?
+	} else {
+		debugFlags = make(map[string][]string, 6)
+		debugFlags["*"] = []string{"echo", "loud"}
+		debugFlags["echo"] = []string{"echo"}
+		debugFlags["false"] = []string{}
+		debugFlags["loud"] = []string{"loud"}
+		debugFlags["none"] = debugFlags["false"]
+		debugFlags["true"] = debugFlags["*"]
+	}
+	if values, ok := debugFlags[key]; ok {
+		for _, value := range values {
+			if value == flag {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func main() {
-	app := &cli.App{}
-	app.Setup()
-	god, err := setup()
-	die(err)
-	die(repl.REPL(god))
+	if iGodVersion == "" {
+		iGodVersion = "development"
+	}
+	home := "/" // TODO: consider using CLI context to load .env
+	if dir, _ := os.UserHomeDir(); len(dir) > 0 {
+		home = dir // ignores err
+	}
+	log.Println(home) // purple?
+	_ = dotenv.Load(path.Join(home, ".iGod"))
+	_ = dotenv.Overload() // will use .env if present
+	deityBrain := "davinci-instruct-beta"
+	deityName := server.ServiceDeity
+
+	// run client or server, resp.
+	app := &cli.App{
+		Usage: "speak with AI in a simple REPL (read, eval, print loop) or via HTTP requests",
+		Name: deityName,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				DefaultText: deityName,
+				EnvVars:     []string{"DEITY_NAME"},
+				Name:        "deity-name",
+				Usage:       "for blasphemers to override the holy moniker",
+				Value:       deityName,
+			},
+			&cli.StringFlag{
+				DefaultText: "false",
+				EnvVars:     []string{"IGOD_DEBUG"},
+				Name:        "debug",
+				Usage:       "set --debug=true for verbose logging",
+				Value:       "none",
+			},
+			&cli.StringFlag{
+				DefaultText: "none",
+				EnvVars:     []string{"HTTP_ADDR"},
+				Name:        "http-addr",
+				Usage:       "network port and/or address for an HTTP server instead of REPL",
+			},
+			&cli.StringFlag{
+				DefaultText: "will prompt",
+				EnvVars:     []string{"HUMAN_NAME"},
+				Name:        "human-name",
+				Usage:       "specify a user's name upfront",
+				Value:       "Human",
+			},
+			&cli.StringFlag{
+				DefaultText: deityBrain,
+				EnvVars:     []string{"OPENAI_ENGINE"},
+				Name:        "openai-engine",
+				Usage:       "specify a certain OpenAI engine",
+				Value:       deityBrain,
+			},
+			&cli.StringFlag{
+				DefaultText: "none",
+				EnvVars:     []string{"OPENAI_KEY"},
+				Name:        "openai-key",
+				Usage:       "specify your OpenAI API key",
+			},
+			&cli.StringFlag{
+				DefaultText: "none",
+				EnvVars:     []string{"OPENAI_ORG"},
+				Name:        "openai-org",
+				Usage:       "specify your OpenAI organization ID (optional)",
+			},
+			&cli.StringFlag{
+				DefaultText: "none",
+				EnvVars:     []string{"OPENAI_URL"},
+				Name:        "openai-url",
+				Usage:       "specify an base URL, for OpenAI APIs",
+				Value:       "https://api.openai.com/v1",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			i, err := setup(c)
+			if err != nil {
+				return err
+			}
+			if addr := c.String("http-addr"); len(addr) > 0 {
+				return server.ListenAndServe(c.Context, addr)
+			}
+			return repl.REPL(i)
+		},
+	}
+	if err := app.Run(os.Args); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

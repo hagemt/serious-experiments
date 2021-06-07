@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"context"
@@ -8,17 +8,18 @@ import (
 	"time"
 )
 
-// iGod implements repl.ReplHandler
+// iGod implements Speaker
 type iGod struct {
-	Speak speaker
-
+	speaker map[string][]SpeakerFunc
 	history []string
 	idDeity string
 	idHuman string
 }
 
-func newDeity(options ...divineOption) *iGod {
-	deity := &iGod{}
+func NewDeity(options ...DivineOption) Speaker {
+	deity := &iGod{
+		speaker: make(map[string][]SpeakerFunc, 1),
+	}
 	deity.Reset()
 	for _, o := range options {
 		_ = o(deity)
@@ -26,12 +27,22 @@ func newDeity(options ...divineOption) *iGod {
 	return deity
 }
 
-func withNames(name, human string) divineOption {
+func WithNames(name, human string) DivineOption {
 	return func(god *iGod) error {
 		god.idDeity = name
 		god.idHuman = human
 		return nil
 	}
+}
+
+func (god *iGod) Add(s SpeakerFunc) Speaker {
+	key := "" // default prefix = none
+	ss, ok := god.speaker[key]
+	if !ok {
+		ss = make([]SpeakerFunc, 0, 1)
+	}
+	god.speaker[key] = append(ss, s)
+	return god
 }
 
 func (god *iGod) Complete(_ string) (string, []string) {
@@ -44,6 +55,15 @@ func (god *iGod) Reset() {
 
 func (god *iGod) Prompt() string {
 	return fmt.Sprintf("%s: ", god.idHuman)
+}
+
+func (god *iGod) Speak(ctx context.Context, line string) Edict {
+	for _, ss := range god.speaker {
+		for _, s := range ss {
+			return s(ctx, line)
+		}
+	}
+	return SimpleEdict("...")
 }
 
 func (god *iGod) Start() []string {
@@ -64,6 +84,7 @@ func (god *iGod) Eval(input string) (string, bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if s := god.Speak(ctx, line); s != nil {
+		// TODO: allow control commands
 		return s.String(), false, s.Act()
 	}
 	return "", false, errors.New("no")

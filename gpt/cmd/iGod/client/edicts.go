@@ -1,11 +1,11 @@
-package main
+package client
 
 import (
 	"context"
 )
 
 /*
-func boundedEdict(text string, dt time.Duration, act func (context.Context) error) edict {
+func boundedEdict(text string, dt time.Duration, act func (context.Context) error) Edict {
 	return &complexEdict{
 		actor: func(ctx context.Context) error {
 			stop := make(chan error, 1)
@@ -26,7 +26,7 @@ func boundedEdict(text string, dt time.Duration, act func (context.Context) erro
 }
 */
 
-func failedEdict(e error) edict {
+func FailedEdict(e error) Edict {
 	return &complexEdict{
 		actor: func(ctx context.Context) error {
 			return e
@@ -45,10 +45,10 @@ func (e complexEdict) String() string {
 	return e.text(e.ctx)
 }
 
-func (str simpleEdict) Act() error {
+func (str SimpleEdict) Act() error {
 	return nil
 }
 
-func (str simpleEdict) String() string {
+func (str SimpleEdict) String() string {
 	return string(str)
 }
