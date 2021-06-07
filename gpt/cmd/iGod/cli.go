@@ -93,7 +93,7 @@ func setup(c *cli.Context) (client.Speaker, error) {
 	// prompt for text and anything missing
 	qs := make([]*survey.Question, 0, 2)
 	if len(ans.Key) > 0 {
-		fmt.Println("Your eager offering pleases", ans.Deity)
+		fmt.Println("Your eager offering pleases the", ans.Deity)
 	} else {
 		qs = append(qs, &survey.Question{
 			Name: "Key",
