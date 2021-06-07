@@ -6,11 +6,8 @@ import (
 )
 
 const (
-	ServiceDivineOptions = "iGodNames"
 	ServiceDeity         = "iGod"
-
-	deityName = "iGod"
-	humanName = "Human"
+	ServiceDivineOptions = "iGodNames"
 )
 
 type (

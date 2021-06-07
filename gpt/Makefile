@@ -1,4 +1,4 @@
-.PHONY: dev install
+.PHONY: dev install lint test
 
 IGOD_ARGS ?=
 
@@ -7,3 +7,9 @@ dev:
 
 install:
 	go install -v ./...
+
+lint:
+	go fmt ./...
+
+test:
+	go test -v ./...

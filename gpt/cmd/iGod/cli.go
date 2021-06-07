@@ -20,6 +20,7 @@ import (
 )
 
 var iGodVersion string
+
 type gptEngine struct {
 	apiClient  gpt3.Client
 	apiTimeout time.Duration
@@ -32,14 +33,15 @@ func seed(ai *gptEngine, i client.Speaker) client.Speaker {
 	i.Add(func(ctx context.Context, prompt string) client.Edict {
 		var risky float32 = 0.5 // 0 = most conservative
 		input := strings.TrimSpace(prompt)
-		if strings.HasPrefix(input, ".") {
-			echo := strings.TrimPrefix(input, ".echo ")
-			e, err := strconv.ParseBool(echo)
+		if strings.HasPrefix(input, ".echo ") {
+			b := strings.TrimPrefix(input, ".echo ")
+			c, err := strconv.ParseBool(b)
 			if err != nil {
-				return client.SimpleEdict(".echo " + strconv.FormatBool(ai.textEcho))
+				// TODO: print help text instead of error
+				return client.FailedEdict(err)
 			}
-			ai.textEcho = e
-			return client.SimpleEdict("ok")
+			ai.textEcho = c
+			return client.SimpleEdict(fmt.Sprintf(".echo %t", ai.textEcho))
 		}
 		req := gpt3.CompletionRequest{
 			//Echo:             false,
@@ -50,7 +52,7 @@ func seed(ai *gptEngine, i client.Speaker) client.Speaker {
 			//TopP:             nil,
 			MaxTokens:   gpt3.IntPtr(1000),
 			Prompt:      []string{input},
-			Stop:        []string{".", "!", "?"},
+			Stop:        []string{"."},
 			Temperature: &risky,
 		}
 		//log.Println(req)
@@ -68,7 +70,11 @@ func seed(ai *gptEngine, i client.Speaker) client.Speaker {
 		output := strings.TrimSpace(first.Text)
 		output = strings.ReplaceAll(output, "\n", " ")
 		output = strings.ReplaceAll(output, "  ", ". ")
-		return client.SimpleEdict(fmt.Sprintf("%s.", strings.TrimSuffix(output, ".")))
+		if strings.HasSuffix(output, "?") {
+			return client.SimpleEdict(output)
+		}
+		output = fmt.Sprintf("%s.", strings.TrimSuffix(output, "."))
+		return client.SimpleEdict(output)
 	})
 	return i
 }
@@ -123,7 +129,7 @@ func setup(c *cli.Context) (client.Speaker, error) {
 		userAgent:  c.String("user-agent"),
 	}
 	if gpt.apiTimeout == 0 {
-		gpt.apiTimeout = time.Minute
+		gpt.apiTimeout = time.Second * 60
 	}
 	if gpt.userAgent == "" {
 		gpt.userAgent = fmt.Sprintf("iGod/%s", iGodVersion)
@@ -146,6 +152,7 @@ func setup(c *cli.Context) (client.Speaker, error) {
 }
 
 var debugFlags map[string][]string
+
 func isDebug(flag, key string) bool {
 	if debugFlags != nil {
 		// TODO: what is a better way to do this?
@@ -189,7 +196,7 @@ func main() {
 	// run client or server, resp.
 	app := &cli.App{
 		Usage: "speak with AI in a simple REPL (read, eval, print loop) or via HTTP requests",
-		Name: deityName,
+		Name:  deityName,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				DefaultText: deityName,

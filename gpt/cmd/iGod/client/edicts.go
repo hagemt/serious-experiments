@@ -26,6 +26,14 @@ func boundedEdict(text string, dt time.Duration, act func (context.Context) erro
 }
 */
 
+func (e complexEdict) Act() error {
+	return e.actor(e.ctx)
+}
+
+func (e complexEdict) String() string {
+	return e.text(e.ctx)
+}
+
 func FailedEdict(e error) Edict {
 	return &complexEdict{
 		actor: func(ctx context.Context) error {
@@ -35,14 +43,6 @@ func FailedEdict(e error) Edict {
 			return e.Error()
 		},
 	}
-}
-
-func (e complexEdict) Act() error {
-	return e.actor(e.ctx)
-}
-
-func (e complexEdict) String() string {
-	return e.text(e.ctx)
 }
 
 func (str SimpleEdict) Act() error {

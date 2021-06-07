@@ -63,7 +63,7 @@ func (god *iGod) Speak(ctx context.Context, line string) Edict {
 			return s(ctx, line)
 		}
 	}
-	return SimpleEdict("...")
+	return SimpleEdict(fmt.Sprintf("%s: ...", god.idDeity))
 }
 
 func (god *iGod) Start() []string {
@@ -78,10 +78,10 @@ func (god *iGod) Stop(history []string) {
 func (god *iGod) Eval(input string) (string, bool, error) {
 	line := strings.TrimSpace(input)
 	if len(line) == 0 {
-		return "", false, errors.New("what")
+		return "", false, errors.New("try: What is your name? (etc.)")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 	if s := god.Speak(ctx, line); s != nil {
 		// TODO: allow control commands
