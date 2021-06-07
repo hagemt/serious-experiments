@@ -27,10 +27,16 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	return service.ListenAndServe(ctx, addr)
 }
 
+func extractOptionalString(fromArgs context.Context, propertyName, defaultValue string) string {
+	if arg := fromArgs.Value(propertyName); arg != nil {
+		return arg.(string)
+	}
+	return defaultValue
+}
+
 func extractNames(ctx context.Context) client.DivineOption {
-	// FIXME: handle missing values gracefully somehow
-	deityName := ctx.Value("deity-name").(string)
-	humanName := ctx.Value("human-name").(string)
+	deityName := extractOptionalString(ctx, "deity-name", "iGod")
+	humanName := extractOptionalString(ctx, "human-name", "Human")
 	optionalValue := ctx.Value(ServiceDivineOptions)
 	switch typedValue := optionalValue.(type) {
 	case client.DivineOption:
@@ -43,12 +49,11 @@ func extractNames(ctx context.Context) client.DivineOption {
 }
 
 func (god *iGodService) gpt(ctx context.Context) client.SpeakerFunc {
-	// FIXME: handle missing values gracefully somehow
-	alg := ctx.Value("openai-engine").(string) // davinci-instruct-beta
-	secret := ctx.Value("openai-key").(string) // highly sensitive
+	alg := extractOptionalString(ctx, "openai-engine", "")
+	secret := extractOptionalString(ctx, "openai-key", "")
 	gpt := gpt3.NewClient(secret, gpt3.WithHTTPClient(god.client))
 	return func(ctx context.Context, prompt string) client.Edict {
-		var risky float32 = 0.5 // TODO: vary with request? (and limit prompts)
+		var risky float32 = 0.5 // TODO: vary with request? (and limit tokens)
 		c, err := gpt.CompletionWithEngine(ctx, alg, gpt3.CompletionRequest{
 			MaxTokens:        gpt3.IntPtr(1000),
 			Prompt:           []string{strings.TrimSpace(prompt)},

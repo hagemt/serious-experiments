@@ -50,7 +50,7 @@ func createAuth() *iGodAuth {
 						sha.Write(bytes)
 				}
 				adminPassword = base64.URLEncoding.EncodeToString(sha.Sum(nil))
-				log.Println("--- HTTP server test credentials...")
+				log.Println("--- iGod HTTP server test credentials...")
 				log.Println(" * ", adminUsername, ":", adminPassword)
 		}
 		a.admin[adminUsername] = adminPassword
