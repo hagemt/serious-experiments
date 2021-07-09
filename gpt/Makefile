@@ -1,8 +1,10 @@
-.PHONY: dev install lint test
+.PHONY: dev iGod install lint test tidy
 
 IGOD_ARGS ?=
 
-dev:
+dev: iGod
+
+iGod:
 	go run ./cmd/iGod $(IGOD_ARGS)
 
 install:
@@ -11,5 +13,8 @@ install:
 lint:
 	go fmt ./...
 
-test:
+test: lint
 	go test -v ./...
+
+tidy: lint
+	go mod tidy -v

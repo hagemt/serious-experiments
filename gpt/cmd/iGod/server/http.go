@@ -20,7 +20,7 @@ type iGodService struct {
 
 func ListenAndServe(ctx context.Context, addr string) error {
 	service := &iGodService{}
-	service.client = &http.Client{Timeout: time.Second*15}
+	service.client = &http.Client{Timeout: time.Second * 15}
 	service.edicts = client.NewDeity(extractNames(ctx))
 	service.engine = createEngine(service)
 	service.values = context.WithValue(ctx, ServiceDeity, service)
@@ -55,10 +55,10 @@ func (god *iGodService) gpt(ctx context.Context) client.SpeakerFunc {
 	return func(ctx context.Context, prompt string) client.Edict {
 		var risky float32 = 0.5 // TODO: vary with request? (and limit tokens)
 		c, err := gpt.CompletionWithEngine(ctx, alg, gpt3.CompletionRequest{
-			MaxTokens:        gpt3.IntPtr(1000),
-			Prompt:           []string{strings.TrimSpace(prompt)},
-			Stop:             []string{"."},
-			Temperature:      &risky,
+			MaxTokens:   gpt3.IntPtr(1000),
+			Prompt:      []string{strings.TrimSpace(prompt)},
+			Stop:        []string{"."},
+			Temperature: &risky,
 		})
 		if err != nil {
 			return client.FailedEdict(err)

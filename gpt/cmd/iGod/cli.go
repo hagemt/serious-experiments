@@ -122,18 +122,18 @@ func setup(c *cli.Context) (client.Speaker, error) {
 		})
 	}
 	if ans.Human != "Human" {
-			// skip prompt if known already
+		// skip prompt if known already
 	} else {
-			qs = append(qs, &survey.Question{
-					Name: "Human",
-					Prompt: &survey.Input{
-							Default: ans.Human,
-							Help:    "a humble moniker",
-							Message: "What is your name?",
-					},
-					Transform: survey.Title,
-					Validate:  survey.Required,
-			})
+		qs = append(qs, &survey.Question{
+			Name: "Human",
+			Prompt: &survey.Input{
+				Default: ans.Human,
+				Help:    "a humble moniker",
+				Message: "What is your name?",
+			},
+			Transform: survey.Title,
+			Validate:  survey.Required,
+		})
 	}
 	if err := survey.Ask(qs, &ans); err != nil {
 		return nil, err
