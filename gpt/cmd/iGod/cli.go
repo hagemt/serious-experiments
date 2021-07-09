@@ -31,7 +31,9 @@ type gptEngine struct {
 func seed(ai *gptEngine, i client.Speaker) client.Speaker {
 	// the REPL calls this with context, and expects an edict
 	i.Add(func(ctx context.Context, prompt string) client.Edict {
-		var risky float32 = 0.5 // 0 = most conservative
+		// TODO: if the user seems hostile or confused, adjust "temperature"
+		var risky float32 = 0.5 // 0 = most conservative (sent as temperature)
+		// TODO: aggregate back-and-forth so that "AI has more context" b/t reqs
 		input := strings.TrimSpace(prompt)
 		if strings.HasPrefix(input, ".echo ") {
 			b := strings.TrimPrefix(input, ".echo ")
@@ -43,6 +45,8 @@ func seed(ai *gptEngine, i client.Speaker) client.Speaker {
 			ai.textEcho = c
 			return client.SimpleEdict(fmt.Sprintf(".echo %t", ai.textEcho))
 		}
+
+		// pure I/O to GTP3 is okay, but it requires a network connection
 		req := gpt3.CompletionRequest{
 			//Echo:             false,
 			//FrequencyPenalty: 0,
@@ -62,17 +66,30 @@ func seed(ai *gptEngine, i client.Speaker) client.Speaker {
 			log.Println(err)
 			return client.FailedEdict(errors.New("please try again"))
 		}
+		// just pick the first choice (probably best option)
 		first := c.Choices[0]
 		if ai.textEcho {
-			// just pick the first choice
+			// use ".echo true" or false to toggle log
 			log.Println(first.FinishReason, first.Text)
 		}
+
+		// output transformations make it a better conversation partner
 		output := strings.TrimSpace(first.Text)
 		output = strings.ReplaceAll(output, "\n", " ")
 		output = strings.ReplaceAll(output, "  ", ". ")
+		output = strings.ReplaceAll(output, "!.", "!")
+		output = strings.ReplaceAll(output, "?.", "?")
+		output = strings.ReplaceAll(output, "..", ".")
+		// FIXME: some of these transforms don't always make sense
 		if strings.HasSuffix(output, "?") {
+			// questions from the AI are always good for conversation
 			return client.SimpleEdict(output)
 		}
+		if len(output) < 2 {
+			// probably hit "stop" because the input didn't end in punctuation
+			return client.SimpleEdict("How rude; please ask questions!")
+		}
+		// make the deity more likely to sound like it's stating facts:
 		output = fmt.Sprintf("%s.", strings.TrimSuffix(output, "."))
 		return client.SimpleEdict(output)
 	})
@@ -148,7 +165,7 @@ func setup(c *cli.Context) (client.Speaker, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	if _, err := gpt.apiClient.Engine(ctx, ans.Engine); err != nil {
-		log.Println("fatal:", gpt, err)
+		//log.Println("fatal:", gpt, err)
 		return nil, err
 	}
 	god := seed(gpt, client.NewDeity(client.WithNames(ans.Deity, ans.Human)))
