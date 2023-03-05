@@ -2,11 +2,12 @@ package server
 
 import (
 	"context"
+
 	"github.com/hagemt/bijection/gpt/cmd/iGod/client"
 )
 
 const (
-	ServiceDeity         = "iGod"
+	ServiceDeity         = ctxKeyText("iGod")
 	ServiceDivineOptions = "iGodNames"
 )
 
@@ -21,4 +22,10 @@ type (
 	ServiceEdict interface {
 		client.Edict
 	}
+
+	ctxKeyText string
 )
+
+func (s ctxKeyText) String() string {
+	return string(s)
+}

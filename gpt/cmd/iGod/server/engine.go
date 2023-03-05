@@ -5,14 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/pprof"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/pprof"
+	"github.com/gin-gonic/gin"
 )
 
 type iGodAuth struct {
@@ -90,7 +91,7 @@ func createEngine(god *iGodService) *gin.Engine {
 
 	api := engine.Group("/api", cors.Default())
 	api.Use(func(c *gin.Context) {
-		c.Set(ServiceDeity, god)
+		c.Set(ServiceDeity.String(), god)
 	})
 	api.POST("/form", handleFormInput)
 	return engine

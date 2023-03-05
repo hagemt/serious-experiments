@@ -1,14 +1,16 @@
 package server
 
 import (
+	"context"
 	"errors"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-func speak(god *iGodService, in string) (string, error) {
-	out := god.edicts.Speak(god.values, in)
-	return out.String(), out.Act()
+func speak(ctx context.Context, og *iGodService, in string) (string, error) {
+	edict := og.edicts.Speak(og.values, in)
+	return edict.String(), edict.Act(ctx)
 }
 
 func handleFormInput(c *gin.Context) {
@@ -17,7 +19,7 @@ func handleFormInput(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusBadRequest, errors.New("missing input text"))
 		return
 	}
-	s, err := speak(extractServiceDeity(c), in)
+	s, err := speak(c.Request.Context(), extractServiceDeity(c), in)
 	if err != nil {
 		_ = c.AbortWithError(http.StatusServiceUnavailable, errors.New("failed edict"))
 		return
@@ -26,8 +28,9 @@ func handleFormInput(c *gin.Context) {
 }
 
 func extractServiceDeity(c *gin.Context) *iGodService {
-	if deity := c.MustGet(ServiceDeity).(*iGodService); deity != nil {
-		return deity
+	name := ServiceDeity.String()
+	if v := c.MustGet(name).(*iGodService); v != nil {
+		return v
 	}
-	panic(errors.New("missing deity"))
+	panic(errors.New("heretic!"))
 }

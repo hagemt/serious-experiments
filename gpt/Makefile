@@ -1,20 +1,23 @@
 .PHONY: dev iGod install lint test tidy
 
+API_VERSION ?= $(shell git tag --list 'v*' | awk 'END{print $1}' )
+BUILD_FLAGS ?= -ldflags '-X main.iGodVersion=$(API_VERSION)'
+
 IGOD_ARGS ?=
 
 dev: iGod
 
 iGod:
-	go run ./cmd/iGod $(IGOD_ARGS)
+	go run $(BUILD_FLAGS) ./cmd/iGod $(IGOD_ARGS)
 
 install:
-	go install -v ./...
+	go install $(BUILD_FLAGS) -v ./...
 
 lint:
 	go fmt ./...
 
 test: lint
-	go test -v ./...
+	go test $(BUILD_FLAGS) -v ./...
 
 tidy: lint
 	go mod tidy -v

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+
 	"github.com/boynton/repl"
 )
 
@@ -11,15 +12,18 @@ type (
 	DivineOption func(*iGod) error
 
 	// Edict is that which iGod spake
+	// (or that which it has done or will do)
+	// each "captures" some action (which can be as simple as responding/a delayed response)
 	Edict interface {
-		Act() error
+		Act(context.Context) error
 		fmt.Stringer
 	}
 
-	// Speaker is kind of like a router that handles requests into responses, but for a deity that returns an Edict
+	// each Speaker routes context + input into Edicts
+	// it could be a "human" or other entity (e.g. a diety)
 	Speaker interface {
 		Add(SpeakerFunc) Speaker
-		Speak(context.Context, string) Edict
+		Speak(ctx context.Context, input string) Edict
 		repl.ReplHandler
 	}
 
@@ -29,8 +33,7 @@ type (
 	// SimpleEdict captures no Act, only String dialog
 	SimpleEdict string
 
-	complexEdict struct {
-		ctx   context.Context // passed into:
+	customEdict struct {
 		actor func(ctx context.Context) error
 		text  func(ctx context.Context) string
 	}
