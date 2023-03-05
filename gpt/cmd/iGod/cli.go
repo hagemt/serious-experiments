@@ -40,7 +40,7 @@ var defaults = struct {
 	HumanName: "Human",
 	UseEngine: "davinci-instruct-beta",
 
-	ShortTimeout: time.Second * 10,
+	ShortTimeout: time.Second * 30,
 	MaxActionTTL: time.Minute / 2,
 }
 

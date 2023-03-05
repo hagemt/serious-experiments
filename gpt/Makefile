@@ -15,6 +15,9 @@ install:
 
 lint:
 	go fmt ./...
+	@[ -x '$(shell command -v gosec)' ] \
+		|| go install github.com/securego/gosec/v2/cmd/gosec@latest
+	gosec ./...
 
 test: lint
 	go test $(BUILD_FLAGS) -v ./...
