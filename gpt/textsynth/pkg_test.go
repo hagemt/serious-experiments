@@ -28,7 +28,7 @@ func TestSynth(t *testing.T) {
 func TestSimpleTranslation(t *testing.T) {
 	t.SkipNow() // this actually expends credits:
 	client := newClient(t)
-	simple := client.Stranslator(context.Background(), &TranslationOptions{
+	simple := client.SimpleT(context.Background(), &TranslationOptions{
 		TargetLang: "es",
 	})
 	o, err := simple.Translate([]string{"Hello!"})

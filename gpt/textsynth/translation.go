@@ -46,7 +46,7 @@ func (s simple) String() string {
 	return string(s)
 }
 
-func (api *apiClient) Stranslator(ctx context.Context, opts *TranslationOptions) SimpleTranslator {
+func (api *apiClient) SimpleT(ctx context.Context, opts *TranslationOptions) SimpleTranslator {
 	sourceLang := "auto"
 	var targetLang string
 	if opts != nil && opts.SourceLang != "" {

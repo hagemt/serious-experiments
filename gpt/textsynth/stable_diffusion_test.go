@@ -2,17 +2,20 @@ package textsynth
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestImage(t *testing.T) {
-	t.SkipNow() // this test spends credits and writes image(s) to /tmp dir:
+	//t.SkipNow() // this test spends credits and writes image(s) to /tmp dir:
 	prompt := "an astronaut riding a horse"
 	client := newClient(t)
-	_, err := client.TextToImage(context.Background(), prompt, &ImagerOptions{
-		Seed: 0,
+	o, err := client.TextToImage(context.Background(), prompt, &ImagerOptions{
+		ImageCount: 4,
+		Seed:       1,
 	})
 	require.NoError(t, err)
+	o.SaveAll(os.TempDir())
 }

@@ -11,14 +11,15 @@ import (
 type (
 	TextSynthAPI interface {
 		Credits(ctx context.Context) (int64, error)
-		Tokens(ctx context.Context, engineName string) Tokenizer
+		Indices(ctx context.Context, engineName string) Tokenizer
 
 		Completions(ctx context.Context, engineName string) TextCompleter
 		TextToImage(ctx context.Context, prompt string, advanced *ImagerOptions) (Images, error)
 
 		LogProb(ctx context.Context, engineName string) LogProber
-		Stranslator(ctx context.Context, simple *TranslationOptions) SimpleTranslator
+		SimpleT(ctx context.Context, simple *TranslationOptions) SimpleTranslator
 
+		OK(ctx context.Context) (int64, error)
 		String() string
 	}
 
@@ -65,6 +66,15 @@ func NewClient(key string, optional *Settings) TextSynthAPI {
 			Timeout: dt,
 		},
 	}
+}
+
+func (api *apiClient) OK(ctx context.Context) (int64, error) {
+	lo := int64(1000 * 1000)
+	c, err := api.Credits(ctx)
+	if err != nil || c <= lo {
+		return c, fmt.Errorf("%s w/ insufficent credits? %w", api, err)
+	}
+	return c, nil
 }
 
 func (api *apiClient) String() string {

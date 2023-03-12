@@ -33,7 +33,7 @@ func (fn tokenizerFunc) Tokenize(text string) (*Tokenized, error) {
 	return fn(text)
 }
 
-func (api *apiClient) Tokens(ctx context.Context, engineName string) Tokenizer {
+func (api *apiClient) Indices(ctx context.Context, engineName string) Tokenizer {
 	return tokenizerFunc(func(text string) (*Tokenized, error) {
 		body := &Tokenized{Input: text}
 		a, err := api.newPOST(engineName, "tokenize", body)

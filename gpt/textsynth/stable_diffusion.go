@@ -33,7 +33,7 @@ type (
 	}
 )
 
-func (is Images) Save(dir string) error {
+func (is Images) SaveAll(dir string) error {
 	path := filepath.Clean(dir)
 	_ = os.MkdirAll(path, os.ModeTemporary)
 	for i, img := range is {
@@ -51,9 +51,12 @@ func (is Images) Save(dir string) error {
 }
 
 func (api *apiClient) TextToImage(ctx context.Context, prompt string, advanced *ImagerOptions) (Images, error) {
-	a, err := api.newPOST("stable_diffusion", "text_to_image", &ImagerOptions{
-		Prompt: prompt,
-	})
+	var in ImagerOptions
+	if advanced != nil {
+		in = *advanced
+	}
+	in.Prompt = prompt
+	a, err := api.newPOST("stable_diffusion", "text_to_image", in)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +76,6 @@ func (api *apiClient) TextToImage(ctx context.Context, prompt string, advanced *
 		}
 		images[i] = j
 	}
-	images.Save(os.TempDir())
+	//images.SaveAll(os.TempDir())
 	return images, nil
 }

@@ -32,7 +32,7 @@ func TestCredits(t *testing.T) {
 
 func TestTokenize(t *testing.T) {
 	synth := newClient(t)
-	api := synth.Tokens(context.Background(), Defaults.EngineName)
+	api := synth.Indices(context.Background(), Defaults.EngineName)
 	out, err := api.Tokenize("The quick brown fox jumps over the lazy dog")
 	require.NoError(t, err)
 
