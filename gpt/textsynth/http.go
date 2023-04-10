@@ -7,48 +7,58 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 )
 
-// TODO: make these configurable via the environment variables
 const (
-	defaultBase       = "https://api.textsynth.com"
-	defaultEngineName = "gptj_6B" // TEXTSYNTH_DEFAULT_ENGINE_NAME
-	key               = ""        // from .env: TEXTSYNTH_KEY (_BASE_URL)
+	envKey                  = "TEXTSYNTH_KEY"                   // required
+	envKeyBase              = "TEXTSYNTH_BASE_URL"              // https://api.textsynth.com
+	envKeyDefaultEngineName = "TEXTSYNTH_DEFAULT_ENGINE_NAME"   // vs. gptj_6B
+	envKeyUserAgent         = "TEXTSYNTH_SET_CUSTOM_USER_AGENT" // vs. go-textsynth/v...
+
+	envKeyMaxTime = "TEXTSYNTH_SLA"
+	envKeyVerbose = "TEXTSYNTH_DEBUG"
 )
+
+var (
+	envVerbose = envString(envKeyVerbose, "")
+
+	debugBody = strings.HasPrefix(envVerbose, "http+body")
+	debugHTTP = strings.HasPrefix(envVerbose, "http")
+)
+
+type apiError struct {
+	ErrorMessage string `json:"error"`
+	//Status json.Number `json:"status"`
+}
+
+func (err *apiError) Error() string {
+	return err.ErrorMessage
+}
 
 func (api *apiClient) failedRoundTrip(in *http.Response, err error) error {
-	var status string
 	if in != nil {
-		a, _ := httputil.DumpRequestOut(in.Request, true)
-		b, _ := httputil.DumpResponse(in, true)
-		log.Println(string(a))
-		log.Println(string(b))
+		if debugHTTP {
+			a, _ := httputil.DumpRequestOut(in.Request, debugBody)
+			log.Println("failed", string(a))
+			b, _ := httputil.DumpResponse(in, debugBody)
+			log.Println("failed", string(b))
+		}
 
-		var e struct {
-			Error string `json:"error"`
-			//Status json.Number `json:"status"`
+		var body apiError
+		if err = json.NewDecoder(in.Body).Decode(&body); err != nil {
+			return fmt.Errorf("%s: json failure=%w", in.Status, err)
 		}
-		status = in.Status
-		if err = json.NewDecoder(in.Body).Decode(&e); err != nil {
-			err = fmt.Errorf("json failure=%w", err)
-		} else {
-			err = fmt.Errorf("API response=%s", e.Error)
-		}
-	} else {
-		status = "?net failure"
+		return fmt.Errorf("%s: API response=%w", in.Status, &body)
 	}
-	return fmt.Errorf("%s: %w", status, err)
+	return fmt.Errorf("no round-trip; HTTP failure: %w", err)
 }
 
 func (api *apiClient) prepareRequest(in *http.Request) *http.Request {
-	r := in.Clone(in.Context())
-	if !in.URL.IsAbs() {
-		a := api.base.ResolveReference(in.URL).String()
-		r, _ = http.NewRequestWithContext(in.Context(), in.Method, a, in.Body)
-	}
-	r.Header.Set("authorization", fmt.Sprintf("Bearer %s", api.key))
-	r.Header.Set("user-agent", "textsynth-go/0.1")
-	return r
+	in.URL = api.base.ResolveReference(in.URL)
+	in.Header.Set("authorization", api.authHeader)
+	in.Header.Set("user-agent", api.userAgent)
+	return in
 }
 
 func (api *apiClient) newPOST(engineName, urlSuffix string, body any) (*http.Request, error) {
@@ -68,11 +78,11 @@ func (api *apiClient) newPOST(engineName, urlSuffix string, body any) (*http.Req
 
 func doRoundTrip[T any](api *apiClient, in *http.Request) (*T, error) {
 	r := api.prepareRequest(in)
-	s, err := api.httpClient.Do(r)
+	s, err := api.http.Do(r)
 	if err != nil {
 		return nil, api.failedRoundTrip(s, err)
 	}
-	defer s.Body.Close()
+	defer closeQuietly(s.Body)
 
 	if s.StatusCode != http.StatusOK {
 		return nil, api.failedRoundTrip(s, err)

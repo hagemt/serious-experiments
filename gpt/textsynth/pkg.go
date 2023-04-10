@@ -24,59 +24,62 @@ type (
 	}
 
 	apiClient struct {
-		base *url.URL
-		key  string
+		authHeader string
+		userAgent  string
 
-		httpClient *http.Client
+		base *url.URL
+		http *http.Client
 	}
 
+	// Settings allows for overriding Defaults
 	Settings struct {
-		SLA time.Duration // default: one minute
+		SLA time.Duration
+
+		BaseURL   string
+		UserAgent string
 	}
 )
 
-var Defaults = struct {
-	EngineName string
-	TimeToWait time.Duration
-}{
-	EngineName: "gptj_6B",
-	TimeToWait: time.Minute,
-	/*
-	   gptj_6B: GPT-J is a language model with 6 billion parameters trained on the Pile (825 GB of text data) published by EleutherAI. Its main language is English but it is also fluent in several other languages. It is also trained on several computer languages.
-	   boris_6B: Boris is a fine tuned version of GPT-J for the French language. Use this model is you want the best performance with the French language.
-	   fairseq_gpt_13B: Fairseq GPT 13B is an English language model with 13 billion parameters. Its training corpus is less diverse than GPT-J but it has better performance at least on pure English language tasks.
-	   gptneox_20B: GPT-NeoX-20B is the largest publically available English language model with 20 billion parameters. It was trained on the same corpus as GPT-J.
-	   codegen_6B_mono: CodeGen-6B-mono is a 6 billion parameter model specialized to generate source code. It was mostly trained on Python code.
-	   m2m100_1_2B: M2M100 1.2B is a 1.2 billion parameter language model specialized for translation. It supports multilingual translation between 100 languages. See the translate endpoint.
-	   stable_diffusion: Stable Diffusion is a 1 billion parameter text to image model trained to generate 512x512 pixel images from English text (sd-v1-4.ckpt checkpoint). See the text_to_image endpoint. There are specific use restrictions associated with this model.
-	*/
-}
-
-func NewClient(key string, optional *Settings) TextSynthAPI {
-	b, _ := url.Parse(defaultBase)
-	dt := Defaults.TimeToWait // long
+// NewClient interacts with TextSynth via the API keyRequired and optional Settings
+func NewClient(keyRequired string, optional *Settings) TextSynthAPI {
+	if keyRequired == "" {
+		panic(fmt.Errorf("ignored Settings: %+v (missing: TextSynth API key)", optional))
+	}
+	base := Defaults.BaseURL
+	if optional != nil && optional.BaseURL != "" {
+		base = optional.BaseURL
+	}
+	b, err := url.Parse(base)
+	if err != nil {
+		panic(err)
+	}
+	dt := Defaults.MaxWaitTime // too long?
 	if optional != nil && optional.SLA >= 0 {
 		dt = optional.SLA
 	}
+	you := Defaults.UserAgent
+	if optional != nil && optional.UserAgent != "" {
+		you = optional.UserAgent
+	}
 	return &apiClient{
-		base: b,
-		key:  key,
-
-		httpClient: &http.Client{
+		authHeader: fmt.Sprintf("Bearer %s", keyRequired),
+		base:       b,
+		userAgent:  you,
+		http: &http.Client{
 			Timeout: dt,
 		},
 	}
 }
 
 func (api *apiClient) OK(ctx context.Context) (int64, error) {
-	lo := int64(1000 * 1000)
+	lo := int64(1000 * 1000) // currently: one USD
 	c, err := api.Credits(ctx)
 	if err != nil || c <= lo {
-		return c, fmt.Errorf("%s w/ insufficent credits? %w", api, err)
+		return c, fmt.Errorf("%s low credits, or: %w", api, err)
 	}
 	return c, nil
 }
 
 func (api *apiClient) String() string {
-	return fmt.Sprintf("GPT: %s", api.base.String())
+	return fmt.Sprintf("@%s/v1", api.base.String())
 }
