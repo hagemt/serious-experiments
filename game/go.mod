@@ -1,4 +1,4 @@
-module github.com/bijection/ios
+module github.com/hagemt/serious_experiments/game
 
 go 1.20
 

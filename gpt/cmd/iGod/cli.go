@@ -14,8 +14,8 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/PullRequestInc/go-gpt3"
 	"github.com/boynton/repl"
-	"github.com/hagemt/bijection/gpt/cmd/iGod/client"
-	"github.com/hagemt/bijection/gpt/cmd/iGod/server"
+	"github.com/hagemt/serious_experiments/gpt/iGod/client"
+	"github.com/hagemt/serious_experiments/gpt/iGod/server"
 	dotenv "github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 )

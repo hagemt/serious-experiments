@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"github.com/hagemt/bijection/gpt/cmd/iGod/client"
+	"github.com/hagemt/serious_experiments/gpt/iGod/client"
 )
 
 const (

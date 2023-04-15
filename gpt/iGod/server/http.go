@@ -2,12 +2,13 @@ package server
 
 import (
 	"context"
-	"github.com/PullRequestInc/go-gpt3"
-	"github.com/gin-gonic/gin"
-	"github.com/hagemt/bijection/gpt/cmd/iGod/client"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/PullRequestInc/go-gpt3"
+	"github.com/gin-gonic/gin"
+	"github.com/hagemt/serious_experiments/gpt/iGod/client"
 )
 
 type iGodService struct {

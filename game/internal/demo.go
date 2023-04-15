@@ -49,7 +49,7 @@ func tcpListen(ctx context.Context, addr string, my *http.Server) error {
 	return nil
 }
 
-func Demo(ctx context.Context, addr string, ui fs.SubFS) error {
+func ServeDemo(ctx context.Context, addr string, ui fs.SubFS) error {
 	msg := StatusMessage(ctx)
 	mux := http.DefaultServeMux
 	if ui != nil {
