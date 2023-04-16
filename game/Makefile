@@ -13,8 +13,8 @@ dev: node_modules
 
 image:
 	[ -x '$(shell command -v docker)' ] # or: brew install --cask docker
-	docker build --build-arg HTTP_ADDR=:3000 -t '$(BUILD_TAG)' -- .
-	# now: docker run --publish 3000:localhost:3000/tcp -- $(BUILD_TAG)
+	docker build -t '$(BUILD_TAG)' -- .
+	# now: docker run --publish 127.0.0.1:3000:3000/tcp -- $(BUILD_TAG)
 .PHONY: image
 
 node_modules: yarn.lock

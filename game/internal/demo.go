@@ -55,7 +55,7 @@ func ServeDemo(ctx context.Context, addr string, ui fs.SubFS) error {
 	if ui != nil {
 		uiHandler := http.FileServer(http.FS(ui))
 		mux.Handle("/ui/", http.StripPrefix("/ui", uiHandler))
-		msg = fmt.Sprintf("UP and /ui on http://%s", addr)
+		msg = fmt.Sprintf("UP and /ui on http://%s/ui", addr)
 	}
 	log.Println("starting services", msg)
 	return tcpListen(ctx, addr, &http.Server{

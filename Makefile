@@ -5,3 +5,7 @@ help:
 iGod:
 	make -C gpt
 .PHONY: iGod
+
+site:
+	make -C game site
+.PHONY: site
