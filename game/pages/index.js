@@ -17,16 +17,15 @@ export default function Home() {
       <main className={styles.main}>
         <div className={styles.description}>
           <p>
-            Get started by editing&nbsp;
-            <code className={styles.code}>pages/index.js</code>
+            <a href="https://pkg.go.dev/embed">These pages are embedded into a GoLang executable.</a>
           </p>
           <div>
             <a
-              href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+              href="https://vercel.com"
               target="_blank"
               rel="noopener noreferrer"
             >
-              By{' '}
+              NextJS is an web framework by{' '}
               <Image
                 src="vercel.svg"
                 alt="Vercel Logo"
@@ -52,7 +51,7 @@ export default function Home() {
 
         <div className={styles.grid}>
           <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+            href="https://nextjs.org/docs"
             className={styles.card}
             target="_blank"
             rel="noopener noreferrer"
@@ -66,7 +65,7 @@ export default function Home() {
           </a>
 
           <a
-            href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+            href="https://nextjs.org/learn"
             className={styles.card}
             target="_blank"
             rel="noopener noreferrer"
@@ -80,7 +79,7 @@ export default function Home() {
           </a>
 
           <a
-            href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+            href="https://vercel.com/templates"
             className={styles.card}
             target="_blank"
             rel="noopener noreferrer"
@@ -94,7 +93,7 @@ export default function Home() {
           </a>
 
           <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+            href="https://vercel.com/new"
             className={styles.card}
             target="_blank"
             rel="noopener noreferrer"

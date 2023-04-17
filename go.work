@@ -4,5 +4,4 @@ use (
 	./game
 	./gpt
 	./mango
-	./server
 )
